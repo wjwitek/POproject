@@ -17,11 +17,11 @@ public class GuiElementBox {
     public GuiElementBox(IMapElement object) throws Exception{
         // import image
         InputStream stream = new FileInputStream(object.getPath());
-        Image objectImage = new Image(stream, 20, 20, true, true);
+        Image objectImage = new Image(stream, 15, 15, true, true);
         ImageView objectImageView = new ImageView(objectImage);
 
         // create virtual box and image
-        this.box = new VBox(objectImageView);
+        this.box = new VBox (objectImageView);
 
         // crate label if object is an animal
         if (object instanceof Animal){

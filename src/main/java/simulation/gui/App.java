@@ -10,9 +10,9 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.RowConstraints;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 import simulation.*;
 
@@ -25,13 +25,16 @@ public class App extends Application {
     public int moveEnergy;
     public int plantEnergy;
     public int startingAnimals;
-    private int SCREEN_WIDTH = 750;
-    private int SCREEN_HEIGHT = 750;
-    private final int CELL_WIDTH = 40;
-    private final int CELL_HEIGHT = 40;
+    private final int SCREEN_WIDTH = 750;
+    private final int SCREEN_HEIGHT = 750;
+    private final int CELL_WIDTH = 20;
+    private final int CELL_HEIGHT = 20;
+    private SimulationEngine engine;
+    public DataTracking boundedDataTracker;
+    public DataTracking rolledDataTracker;
 
     @Override
-    public void start(Stage primaryStage) throws Exception{
+    public void start(Stage primaryStage) {
         primaryStage.setTitle("Simulation");
 
         settingMenu(primaryStage);
@@ -55,9 +58,9 @@ public class App extends Application {
         widthField.setText("20");
         heightField.setText("20");
         startEnergyField.setText("100");
-        moveEnergyField.setText("20");
-        plantEnergyField.setText("100");
-        jungleRatioField.setText("0.5");
+        moveEnergyField.setText("5");
+        plantEnergyField.setText("50");
+        jungleRatioField.setText("0.2");
         startAnimals.setText("10");
 
         // button to save settings and change scene
@@ -70,15 +73,44 @@ public class App extends Application {
     }
 
     public void mapStage(Stage primaryStage) {
-        GridPane gridPane = initGridPane();
+        // initialize GridPanes for both maps
+        GridPane rolledGridPane = initGridPane();
+        GridPane boundedGridPane = initGridPane();
+        // create general layout of scene
+        GridPane layout = new GridPane();
+        layout.setHgap(20);
+        layout.setVgap(20);
+        // add grids to layout
+        layout.add(rolledGridPane, 0, 0, 1, 1);
+        layout.add(boundedGridPane, 0, 1, 1, 1);
 
         // start simulation
-        SimulationEngine engine = new SimulationEngine(this, gridPane);
+        engine = new SimulationEngine(this, rolledGridPane, boundedGridPane);
 
-        Scene scene = new Scene(gridPane, SCREEN_WIDTH, SCREEN_HEIGHT);
+        // add buttons to layout
+        createStopStartButton(layout, engine.rolledMap, 0);
+        createStopStartButton(layout, engine.boundedMap, 1);
+
+        // start tracking data
+        boundedDataTracker = new DataTracking(engine.boundedMap);
+        rolledDataTracker = new DataTracking(engine.rolledMap);
+
+        // add charts to grid
+        layout.add(rolledDataTracker.drawAnimalGrassChart(), 2, 0, 1, 1);
+        layout.add(rolledDataTracker.drawAverageEnergy(), 3, 0, 1, 1);
+        layout.add(rolledDataTracker.drawAverageLifeSpan(), 4, 0, 1, 1);
+
+        layout.add(boundedDataTracker.drawAnimalGrassChart(), 2, 1, 1, 1);
+        layout.add(boundedDataTracker.drawAverageEnergy(), 3, 1, 1, 1);
+        layout.add(boundedDataTracker.drawAverageLifeSpan(), 4, 1, 1 , 1);
+
+        // find and display mode
+
+
+        Scene scene = new Scene(layout, SCREEN_WIDTH, SCREEN_HEIGHT);
 
         Thread engineThread = new Thread(() -> {
-            for (int i=0; i < 5; i++) {
+            while (true) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
@@ -128,20 +160,19 @@ public class App extends Application {
         Button save = new Button("Start");
         save.setAlignment(Pos.CENTER);
         save.setDefaultButton(true); // clicking enter is equal to pressing this button
-        save.setOnAction(new EventHandler<ActionEvent>() {
+        save.setOnAction(new EventHandler<>() {
             @Override
             public void handle(ActionEvent actionEvent) {
                 // get values from text fields
                 boolean correctValues = true;
                 try {
                     getSimParams(widthField, heightField, startEnergyField, moveEnergyField, plantEnergyField, jungleRatioField, startAnimals);
-                }
-                catch (Exception ex){
+                } catch (Exception ex) {
                     correctValues = false;
                     Alert warning = new Alert(Alert.AlertType.ERROR, "Check provided values, some of them are of incorrect type or range.");
                     warning.show();
                 }
-                if (correctValues){
+                if (correctValues) {
                     try {
                         mapStage(primaryStage);
                     } catch (Exception e) {
@@ -153,13 +184,33 @@ public class App extends Application {
         gridPane.add(save, 1, 21, 2, 1);
     }
 
-    public void drawAnimals(GridPane gridPane, AbstractWorldMap map) throws Exception {
-        gridPane.setGridLinesVisible(false);
+    public void createStopStartButton(GridPane gridPane, AbstractWorldMap map, int row){
+        Button stopStart = new Button("Stop");
+        stopStart.setAlignment(Pos.CENTER);
+        stopStart.setDefaultButton(true); // clicking enter is equal to pressing this button
+        stopStart.setOnAction(new EventHandler<>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                // get values from text fields
+                if (map.active){
+                    map.active = false;
+                    stopStart.setText("Start");
+                }
+                else {
+                    map.active = true;
+                    stopStart.setText("Stop");
+                }
+            }
+        });
+        gridPane.add(stopStart, 1, row, 1, 1);
+    }
+
+    public void draw(GridPane gridPane, AbstractWorldMap map) throws Exception {
         gridPane.getChildren().clear();
-        gridPane.setGridLinesVisible(true);
-        for (Animal animal : map.animals.values()){
-            gridPane.add(new GuiElementBox(animal).box, animal.position.x, animal.position.y, 1, 1);
-        }
+
+        setColors(gridPane);
+
+        drawAnimals(gridPane, map);
         drawGrass(gridPane, map);
     }
 
@@ -175,7 +226,7 @@ public class App extends Application {
         }
 
         // add row constraints
-        for (int i = 0; i < height + 1; i++){
+        for (int i = 0; i < height; i++){
             RowConstraints row = new RowConstraints(CELL_HEIGHT);
             gridPane.getRowConstraints().add(row);
         }
@@ -193,6 +244,30 @@ public class App extends Application {
     private void drawGrass(GridPane gridPane, AbstractWorldMap map) throws Exception {
         for (Vector2D position : map.grasses.keySet()){
             gridPane.add(new GuiElementBox(map.grasses.get(position)).box, position.x, position.y, 1, 1);
+        }
+    }
+
+    private void drawAnimals(GridPane gridPane, AbstractWorldMap map) throws Exception{
+        for (Animal animal : map.animals.values()){
+            gridPane.add(new GuiElementBox(animal).box, animal.position.x, animal.position.y, 1, 1);
+        }
+    }
+
+    private void setColors(GridPane gridPane){
+        String jungleColor = "-fx-background-color: #ADD8E6;";
+        String steppeColor = "-fx-background-color: #DBF3FA;";
+        for (int i = 0; i < width + 1; i++){
+            for (int j=0; j < height + 1; j++){
+                Label background = new Label(" ");
+                background.setPrefSize(CELL_WIDTH, CELL_HEIGHT);
+                if (new Vector2D(i, j).follows(engine.rolledMap.jungleLeftCorner) && new Vector2D(i, j).precedes(engine.rolledMap.jungleRightCorner)){
+                    background.setStyle(jungleColor);
+                }
+                else {
+                    background.setStyle(steppeColor);
+                }
+                gridPane.add(background, i, j, 1, 1);
+            }
         }
     }
 }

@@ -7,10 +7,8 @@ import simulation.gui.App;
 import java.util.Iterator;
 import java.util.Map;
 
-public class RolledWorldMap extends AbstractWorldMap{
-    public RolledWorldMap(App app) {
-        super(app);
-    }
+public class BoundedWorldMap extends AbstractWorldMap{
+    public BoundedWorldMap(App app){super(app);}
 
     public void moveAnimals(){
         //for each animal randomize type of movement, where should they be after
@@ -18,16 +16,16 @@ public class RolledWorldMap extends AbstractWorldMap{
             animal.move();
             // handle animal going over the map
             if (animal.position.x < leftCorner.x){
-                animal.position.x = 1 + rightCorner.x - (leftCorner.x - animal.position.x);
+                animal.position.x = leftCorner.x;
             }
             if (animal.position.y < leftCorner.y){
-                animal.position.y = 1 + rightCorner.y - (leftCorner.y - animal.position.y);
+                animal.position.y = leftCorner.y;
             }
             if (animal.position.x > rightCorner.x){
-                animal.position.x = animal.position.x - (rightCorner.x + 1) + leftCorner.x;
+                animal.position.x = rightCorner.x;
             }
             if (animal.position.y > rightCorner.y){
-                animal.position.y = animal.position.y - (rightCorner.y + 1) + leftCorner.y;
+                animal.position.y = rightCorner.y;
             }
         }
         // if position has changed update animals

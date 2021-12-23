@@ -12,10 +12,12 @@ Animals position is numerated as in GridPane.
 public class Animal implements IMapElement{
     public Vector2D position;
     private Orientation orientation;
-    public ArrayList<Integer> genome = new ArrayList<Integer>();
+    public ArrayList<Integer> genome = new ArrayList<>();
     public int energy;
     private ArrayList<Animal> children = new ArrayList<>();
-    private final AbstractWorldMap map;
+    private AbstractWorldMap map;
+    public int lifeSpan = 1;
+    public String signature = ""; // for easier finding of mode
 
     public Animal(Vector2D startingPosition, int startingEnergy, AbstractWorldMap newMap){
         // constructor for random animal
@@ -52,12 +54,12 @@ public class Animal implements IMapElement{
             case NORTHWEST -> {return "src\\main\\resources\\northwest.png";}
             case SOUTHEAST -> {return "src\\main\\resources\\southeast.png";}
             case SOUTHWEST -> {return "src\\main\\resources\\southwest.png";}
-            default -> throw new IllegalArgumentException(orientation.toString() + " is not a legal orientation of animal.");
+            default -> throw new IllegalArgumentException(orientation + " is not a legal orientation of animal.");
         }
     }
 
     public void randomGenome(){
-        ArrayList<Integer> helperNums = new ArrayList<Integer>();
+        ArrayList<Integer> helperNums = new ArrayList<>();
         for (int i = 0; i<31; i++) {
             helperNums.add(i);
         }
@@ -66,6 +68,8 @@ public class Animal implements IMapElement{
         // leave only first seven values
         List<Integer> temp = helperNums.subList(0, 6);
         Collections.sort(temp);
+        // create signature as array
+        int[] sign = {0, 0, 0, 0, 0, 0, 0, 0};
         // create list representing genome
         int[] nums = {0, 1, 2, 3, 4, 5, 6, 7};
         int index = 0;
@@ -73,8 +77,17 @@ public class Animal implements IMapElement{
             if (index < 6 && temp.get(index) == i - 1){
                 index ++;
             }
+            sign[index] ++;
             genome.add(nums[index]);
         }
+        // turn sign into signature
+        StringBuilder stringBuilder = new StringBuilder(signature);
+        stringBuilder.append(sign[0]);
+        for (int i=1; i<8; i++){
+            stringBuilder.append(".");
+            stringBuilder.append(sign[i]);
+        }
+        signature = stringBuilder.toString();
     }
 
     public int randomGene(){
@@ -82,8 +95,6 @@ public class Animal implements IMapElement{
         Random rand = new Random();
         return rand.nextInt(32);
     }
-
-    public void eat(int newEnergy){ energy += newEnergy; }
 
     public Animal childGenome(Animal other){
         Animal child = new Animal((int) ((energy + other.energy) * 0.25), this.map);
@@ -93,6 +104,18 @@ public class Animal implements IMapElement{
         int firstRatio = (int)(((float) energy / (float)(energy + other.energy)) * 32.0);
         child.genome = new ArrayList<>(genome.subList(0, firstRatio));
         child.genome.addAll(other.genome.subList(firstRatio, 32));
+        // create child's signature
+        int[] sign = {0, 0, 0, 0, 0, 0, 0, 0};
+        for (int i=0; i<32; i++){
+            sign[child.genome.get(i)] += 1;
+        }
+        StringBuilder stringBuilder = new StringBuilder(child.signature);
+        stringBuilder.append(sign[0]);
+        for (int i=1; i<8; i++){
+            stringBuilder.append(".");
+            stringBuilder.append(sign[i]);
+        }
+        child.signature = stringBuilder.toString();
         return child;
     }
 
@@ -107,6 +130,14 @@ public class Animal implements IMapElement{
         }
         children.add(child);
         other.children.add(child);
+        // give child orientation and energy from parents
+        child.orientation = Orientation.values()[child.genome.get(child.randomGene())];
+        child.energy = (int) (0.25 * (double) (energy + other.energy));
+        // reduce parents energy
+        energy -= (int) (0.25 * (double) energy);
+        other.energy -= (int) (0.25 * (double) other.energy);
+        // inherit map
+        child.map = map;
         return child;
     }
 

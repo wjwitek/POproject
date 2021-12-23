@@ -7,38 +7,60 @@ import simulation.gui.App;
 import java.util.*;
 
 public class AbstractWorldMap {
-    private double jungleChance = 0.8; // chance that new grass is spawned in jungle as opposed to steppe
-    protected int newGrass = 5; // amount of grass spawned each day TODO: change to app input
-    protected final Vector2D leftCorner;
-    protected final Vector2D rightCorner;
-    private final Vector2D jungleLeftCorner;
-    private final Vector2D jungleRightCorner;
+    public final Vector2D leftCorner = new Vector2D(0, 0);
+    public final Vector2D rightCorner;
+    public final Vector2D jungleLeftCorner;
+    public final Vector2D jungleRightCorner;
     public MultiValuedMap<Vector2D, Animal> animals = new ArrayListValuedHashMap<>();
     public LinkedHashMap<Vector2D, Grass> grasses = new LinkedHashMap<>();
     public boolean active = true;
     public App app; // to take parameters from app, instead of passing them as arguments
+    protected ArrayList<Vector2D> freeJungle = new ArrayList<>();
+    protected ArrayList<Vector2D> freeSteppe = new ArrayList<>();
+    public int totalEnergy = 0;
+    public int totalLifeSpan = 0; // total life span of dead animals
+    public int totalDead = 0;
+    public LinkedHashMap<String, Integer> signatures = new LinkedHashMap<>();
+
 
     public AbstractWorldMap(App newApp){
         app = newApp;
-        leftCorner = new Vector2D(0, 0);
         rightCorner = new Vector2D(app.width, app.height);
-        jungleLeftCorner = new Vector2D(5, 5); //TODO: change to be calculated based on jungleRatio
-        jungleRightCorner = new Vector2D(10, 10);
+        // calculate jungle corners based on jungleRatio
+        int jungleWidth = (int)((double) app.width * app.jungleRatio);
+        int jungleHeight = (int)((double) app.height * app.jungleRatio);
+        jungleLeftCorner = new Vector2D((app.width - jungleWidth) / 2, (app.height - jungleHeight) / 2);
+        jungleRightCorner = new Vector2D((app.width + jungleWidth) / 2, (app.height + jungleHeight) / 2);
         // generate initial animals
         genStartingAnimals();
-        // set starting grass
-        addGrass();
+        totalEnergy += animals.size() * app.startingEnergy;
+        // generate free positions on map
+        for (int i= leftCorner.x; i< rightCorner.x; i++){
+            for (int j= leftCorner.y; j< rightCorner.y; j++){
+                Vector2D position = new Vector2D(i, j);
+                if (!(animals.containsKey(position))){
+                    if (isCellInJungle(position)){
+                        freeJungle.add(position);
+                    }
+                    else {
+                        freeSteppe.add(position);
+                    }
+                }
+            }
+        }
     }
 
     public void decreaseEnergy(){
         for (Animal animal : animals.values()){
             animal.energy -= app.moveEnergy;
+            totalEnergy -= app.moveEnergy;
+            animal.lifeSpan += 1;
         }
     }
 
     public void genStartingAnimals(){
         // generate set of initial positions
-        Set<Vector2D> initialPositions = new HashSet<Vector2D>();
+        Set<Vector2D> initialPositions = new HashSet<>();
         Vector2D randGenerator = new Vector2D(0, 0);
         while (initialPositions.size() < app.startingAnimals){
             initialPositions.add(randGenerator.randomVectorWithin(leftCorner, rightCorner));
@@ -47,55 +69,157 @@ public class AbstractWorldMap {
         for (Vector2D position: initialPositions){
             Animal newAnimal = new Animal(new Vector2D(position.x, position.y), app.startingEnergy, this);
             animals.put(position, newAnimal);
+            if (signatures.containsKey(newAnimal.signature)){
+                signatures.put(newAnimal.signature, signatures.get(newAnimal.signature) + 1);
+            }
+            else {
+                signatures.put(newAnimal.signature, 1);
+            }
         }
-    }
-
-    public boolean isCellFree(Vector2D cell){
-        return !(animals.containsKey(cell) || grasses.containsKey(cell));
     }
 
     public boolean isCellInJungle(Vector2D cell){
         return cell.follows(jungleLeftCorner) && cell.precedes(jungleRightCorner);
     }
 
-    public boolean freeCells(Vector2D left, Vector2D right){
-        for (int i = left.x; i < right.x; i++){
-            for (int j = left.y; j < right.y; j++){
-                if (isCellFree(new Vector2D(i, j))){
-                    return true;
-                }
-            }
+    public void addGrass(){
+        Random rand = new Random();
+        // add grass in jungle
+        if (!(freeJungle.isEmpty())){
+            Vector2D position = freeJungle.get(rand.nextInt(freeJungle.size()));
+            grasses.put(position, new Grass(position.copy()));
+            freeJungle.remove(position);
         }
-        return false;
+        // add grass in steppe
+        if (!(freeSteppe.isEmpty())){
+            Vector2D position = freeSteppe.get(rand.nextInt(freeSteppe.size()));
+            grasses.put(position, new Grass(position.copy()));
+            freeSteppe.remove(position);
+        }
     }
 
-    public void addGrass(){
-        int counter = 0;
-        Random rand = new Random();
-        while (freeCells(leftCorner, rightCorner) && counter < newGrass){
-            // decide whether new grass should be in jungle or steppe
-            if (freeCells(jungleLeftCorner, jungleRightCorner) && rand.nextInt(100) < (app.jungleRatio * 100)){
-                int x = rand.nextInt(jungleRightCorner.x - jungleLeftCorner.x) + jungleLeftCorner.x;
-                int y = rand.nextInt(jungleRightCorner.y - jungleLeftCorner.y) + jungleLeftCorner.y;
-                Vector2D position = new Vector2D(x, y);
-                while (!(isCellFree(position))){
-                    position.x = rand.nextInt(jungleRightCorner.x - jungleLeftCorner.x) + jungleLeftCorner.x;
-                    position.y = rand.nextInt(jungleRightCorner.y - jungleLeftCorner.y) + jungleLeftCorner.y;
+    private void freeCell(Vector2D position){
+        if (isCellInJungle(position)){
+            freeJungle.add(position);
+        }
+        else {
+            freeSteppe.add(position);
+        }
+    }
+
+    private void takeCell(Vector2D position){
+        if (isCellInJungle(position)){
+            freeJungle.remove(position);
+        }
+        else {
+            freeSteppe.remove(position);
+        }
+    }
+
+    protected void updateAnimals(){
+        Iterator<Map.Entry<Vector2D, Animal>> iter = animals.entries().iterator();
+        MultiValuedMap<Vector2D, Animal> temp = new ArrayListValuedHashMap<>();
+        while (iter.hasNext()){
+            Map.Entry<Vector2D, Animal> entry = iter.next();
+            if (!(entry.getKey().equals(entry.getValue().position))){
+                iter.remove();
+                if (!(animals.containsKey(entry.getKey()))){
+                    freeCell(entry.getKey());
                 }
-                grasses.put(position, new Grass(position.copy()));
-                counter += 1;
-            }
-            else {
-                int x = rand.nextInt(rightCorner.x - leftCorner.x) + leftCorner.x;
-                int y = rand.nextInt(rightCorner.y - leftCorner.y) + leftCorner.y;
-                Vector2D position = new Vector2D(x, y);
-                while (!(isCellFree(position)) && isCellInJungle(position)){
-                    position.x = rand.nextInt(rightCorner.x - leftCorner.x) + leftCorner.x;
-                    position.y = rand.nextInt(rightCorner.y - leftCorner.y) + leftCorner.y;
-                }
-                grasses.put(position, new Grass(position.copy()));
-                counter += 1;
+                temp.put(entry.getValue().getPosition().copy(), entry.getValue());
+                takeCell(entry.getValue().getPosition());
             }
         }
+        animals.putAll(temp);
+    }
+
+    public void moveAnimals() {
+    }
+
+    public void killAnimals(){
+        Iterator<Map.Entry<Vector2D, Animal>> iter = animals.entries().iterator();
+        while (iter.hasNext()){
+            Map.Entry<Vector2D, Animal> entry = iter.next();
+            if (entry.getValue().energy < 0){
+                totalEnergy -= entry.getValue().energy;
+                totalDead += 1;
+                totalLifeSpan += entry.getValue().lifeSpan;
+                if (signatures.get(entry.getValue().signature) == 1){
+                    signatures.remove(entry.getValue().signature);
+                }
+                else {
+                    signatures.put(entry.getValue().signature, signatures.get(entry.getValue().signature) - 1);
+                }
+                iter.remove();
+                if (!(animals.containsKey(entry.getKey()))){
+                    freeCell(entry.getKey());
+                }
+            }
+        }
+    }
+
+    public void eatGrass(){
+        for (Vector2D position : animals.keySet()){
+            if (grasses.containsKey(position)){
+                List<Animal> partialAnimal = (List<Animal>) animals.get(position);
+                if (partialAnimal.size() == 1){
+                    partialAnimal.get(0).energy += app.plantEnergy;
+                    totalEnergy += app.plantEnergy;
+                }
+                else{
+                    ArrayList<Animal> distributeEnergy = highestEnergy(partialAnimal);
+                    int energyForEach = app.plantEnergy / distributeEnergy.size();
+                    for (Animal animal : distributeEnergy){
+                        animal.energy += energyForEach;
+                        totalEnergy += energyForEach;
+                    }
+                }
+                // remove grass from map
+                grasses.remove(position);
+            }
+        }
+    }
+
+    private ArrayList<Animal> highestEnergy(List<Animal> partialAnimal){
+        // get list of animals with the highest energy
+        ArrayList<Animal> answer = new ArrayList<>();
+        answer.add(partialAnimal.get(0));
+        for (int i=1; i < partialAnimal.size(); i++){
+            if (answer.get(0).energy == partialAnimal.get(i).energy){
+                answer.add(partialAnimal.get(i));
+            }
+            else if (answer.get(0).energy < partialAnimal.get(i).energy){
+                answer.clear();
+                answer.add(partialAnimal.get(i));
+            }
+        }
+        return answer;
+    }
+
+    public void makeNewAnimals(){
+        for (Vector2D position : animals.keySet()){
+            if (animals.get(position).size() > 1){
+                Animal mother = Collections.max(animals.get(position), Comparator.comparing(animal -> animal.energy));
+                Animal father = Collections.min(animals.get(position), Comparator.comparing(animal -> animal.energy));
+                for (Animal animal : animals.get(position)){
+                    if (animal != mother && animal.energy > father.energy){
+                        father = animal;
+                    }
+                }
+                Animal newAnimal = mother.child(father);
+                animals.put(position, newAnimal);
+                if (signatures.containsKey(newAnimal.signature)){
+                    signatures.put(newAnimal.signature, signatures.get(newAnimal.signature) + 1);
+                }
+                else {
+                    signatures.put(newAnimal.signature, 1);
+                }
+            }
+        }
+    }
+
+    public String getMode(){
+        // TODO
+        return null;
     }
 }
