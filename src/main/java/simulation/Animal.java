@@ -14,10 +14,12 @@ public class Animal implements IMapElement{
     private Orientation orientation;
     public ArrayList<Integer> genome = new ArrayList<>();
     public int energy;
-    private ArrayList<Animal> children = new ArrayList<>();
     private AbstractWorldMap map;
     public int lifeSpan = 1;
-    public String signature = ""; // for easier finding of mode
+    public boolean isChildOfTracked = false;
+    public boolean isDescendantOfTracked = false;
+    public boolean isTracked = false;
+    public int numOfChildren = 0;
 
     public Animal(Vector2D startingPosition, int startingEnergy, AbstractWorldMap newMap){
         // constructor for random animal
@@ -69,7 +71,6 @@ public class Animal implements IMapElement{
         List<Integer> temp = helperNums.subList(0, 6);
         Collections.sort(temp);
         // create signature as array
-        int[] sign = {0, 0, 0, 0, 0, 0, 0, 0};
         // create list representing genome
         int[] nums = {0, 1, 2, 3, 4, 5, 6, 7};
         int index = 0;
@@ -77,17 +78,8 @@ public class Animal implements IMapElement{
             if (index < 6 && temp.get(index) == i - 1){
                 index ++;
             }
-            sign[index] ++;
             genome.add(nums[index]);
         }
-        // turn sign into signature
-        StringBuilder stringBuilder = new StringBuilder(signature);
-        stringBuilder.append(sign[0]);
-        for (int i=1; i<8; i++){
-            stringBuilder.append(".");
-            stringBuilder.append(sign[i]);
-        }
-        signature = stringBuilder.toString();
     }
 
     public int randomGene(){
@@ -104,18 +96,6 @@ public class Animal implements IMapElement{
         int firstRatio = (int)(((float) energy / (float)(energy + other.energy)) * 32.0);
         child.genome = new ArrayList<>(genome.subList(0, firstRatio));
         child.genome.addAll(other.genome.subList(firstRatio, 32));
-        // create child's signature
-        int[] sign = {0, 0, 0, 0, 0, 0, 0, 0};
-        for (int i=0; i<32; i++){
-            sign[child.genome.get(i)] += 1;
-        }
-        StringBuilder stringBuilder = new StringBuilder(child.signature);
-        stringBuilder.append(sign[0]);
-        for (int i=1; i<8; i++){
-            stringBuilder.append(".");
-            stringBuilder.append(sign[i]);
-        }
-        child.signature = stringBuilder.toString();
         return child;
     }
 
@@ -128,8 +108,6 @@ public class Animal implements IMapElement{
         else{
             child = other.childGenome(this);
         }
-        children.add(child);
-        other.children.add(child);
         // give child orientation and energy from parents
         child.orientation = Orientation.values()[child.genome.get(child.randomGene())];
         child.energy = (int) (0.25 * (double) (energy + other.energy));
@@ -138,6 +116,18 @@ public class Animal implements IMapElement{
         other.energy -= (int) (0.25 * (double) other.energy);
         // inherit map
         child.map = map;
+        // inherit tracking
+        if (isTracked || other.isTracked){
+            child.isChildOfTracked = true;
+            map.childrenOfTracked += 1;
+        }
+        else if (isChildOfTracked || isDescendantOfTracked || other.isChildOfTracked || other.isDescendantOfTracked){
+            child.isDescendantOfTracked = true;
+            map.offspringOfTracked += 1;
+        }
+        // add to children counter
+        numOfChildren += 1;
+        other.numOfChildren += 1;
         return child;
     }
 

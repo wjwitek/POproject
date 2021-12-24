@@ -43,9 +43,15 @@ public class SimulationEngine implements Runnable{
         map.makeNewAnimals();
         // update data for statistics
         dataTracker.updateData();
+        if (map instanceof RolledWorldMap){
+            dataTracker.modes(map.app.rBox);
+        }else{
+            dataTracker.modes(map.app.bBox);
+        }
+        dataTracker.updateAnimalStats();
         // draw current state of maps
         try {
-            map.app.draw(gridPane, map);
+            map.app.draw(gridPane, map, dataTracker);
         }
         catch (Exception ex){
             System.out.println(ex.getMessage());

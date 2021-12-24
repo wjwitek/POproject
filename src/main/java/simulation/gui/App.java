@@ -6,15 +6,12 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 import simulation.*;
+
+import java.util.Set;
 
 
 public class App extends Application {
@@ -25,13 +22,14 @@ public class App extends Application {
     public int moveEnergy;
     public int plantEnergy;
     public int startingAnimals;
-    private final int SCREEN_WIDTH = 750;
-    private final int SCREEN_HEIGHT = 750;
     private final int CELL_WIDTH = 20;
     private final int CELL_HEIGHT = 20;
     private SimulationEngine engine;
     public DataTracking boundedDataTracker;
     public DataTracking rolledDataTracker;
+
+    public VBox rBox;
+    public VBox bBox;
 
     @Override
     public void start(Stage primaryStage) {
@@ -81,32 +79,54 @@ public class App extends Application {
         layout.setHgap(20);
         layout.setVgap(20);
         // add grids to layout
-        layout.add(rolledGridPane, 0, 0, 1, 1);
-        layout.add(boundedGridPane, 0, 1, 1, 1);
+        layout.add(rolledGridPane, 0, 0, 1, 2);
+        layout.add(boundedGridPane, 0, 2, 1, 2);
 
         // start simulation
         engine = new SimulationEngine(this, rolledGridPane, boundedGridPane);
 
         // add buttons to layout
         createStopStartButton(layout, engine.rolledMap, 0);
-        createStopStartButton(layout, engine.boundedMap, 1);
+        createStopStartButton(layout, engine.boundedMap, 2);
+
+        // add grids for animal statistics
+        GridPane rolledAnimalStats = new GridPane();
+        GridPane boundedAnimalStats = new GridPane();
+        layout.add(rolledAnimalStats, 4, 1, 2, 1);
+        layout.add(boundedAnimalStats, 4, 3, 2, 1);
 
         // start tracking data
-        boundedDataTracker = new DataTracking(engine.boundedMap);
-        rolledDataTracker = new DataTracking(engine.rolledMap);
+        boundedDataTracker = new DataTracking(engine.boundedMap, boundedAnimalStats);
+        rolledDataTracker = new DataTracking(engine.rolledMap, rolledAnimalStats);
 
         // add charts to grid
         layout.add(rolledDataTracker.drawAnimalGrassChart(), 2, 0, 1, 1);
         layout.add(rolledDataTracker.drawAverageEnergy(), 3, 0, 1, 1);
-        layout.add(rolledDataTracker.drawAverageLifeSpan(), 4, 0, 1, 1);
+        layout.add(rolledDataTracker.drawAverageLifeSpan(), 2,1, 1, 1);
+        layout.add(rolledDataTracker.drawAverageChildren(), 3, 1, 1, 1);
 
-        layout.add(boundedDataTracker.drawAnimalGrassChart(), 2, 1, 1, 1);
-        layout.add(boundedDataTracker.drawAverageEnergy(), 3, 1, 1, 1);
-        layout.add(boundedDataTracker.drawAverageLifeSpan(), 4, 1, 1 , 1);
+        layout.add(boundedDataTracker.drawAnimalGrassChart(), 2, 2, 1, 1);
+        layout.add(boundedDataTracker.drawAverageEnergy(), 3, 2, 1, 1);
+        layout.add(boundedDataTracker.drawAverageLifeSpan(), 2, 3, 1 , 1);
+        layout.add(boundedDataTracker.drawAverageChildren(), 3, 3, 1, 1);
 
         // find and display mode
+        ScrollPane rolledMode = new ScrollPane();
+        rBox = new VBox();
+        rolledMode.setContent(rBox);
+        layout.add(rolledMode, 4, 0, 1, 1);
 
+        ScrollPane boundedMode = new ScrollPane();
+        bBox = new VBox();
+        boundedMode.setContent(bBox);
+        layout.add(boundedMode, 4, 2, 1, 1);
 
+        // add buttons to highlight animals
+        layout.add(startHighlight(rolledGridPane, engine.rolledMap, rolledDataTracker), 1, 1, 1, 1);
+        layout.add(startHighlight(boundedGridPane, engine.boundedMap, boundedDataTracker), 1, 3, 1, 1);
+
+        int SCREEN_WIDTH = 750;
+        int SCREEN_HEIGHT = 750;
         Scene scene = new Scene(layout, SCREEN_WIDTH, SCREEN_HEIGHT);
 
         Thread engineThread = new Thread(() -> {
@@ -205,12 +225,12 @@ public class App extends Application {
         gridPane.add(stopStart, 1, row, 1, 1);
     }
 
-    public void draw(GridPane gridPane, AbstractWorldMap map) throws Exception {
+    public void draw(GridPane gridPane, AbstractWorldMap map, DataTracking dataTracking) throws Exception {
         gridPane.getChildren().clear();
 
         setColors(gridPane);
 
-        drawAnimals(gridPane, map);
+        drawAnimals(gridPane, map, dataTracking);
         drawGrass(gridPane, map);
     }
 
@@ -233,23 +253,21 @@ public class App extends Application {
         return gridPane;
     }
 
-    private Label getLabel(String text){
-        Label num = new Label(text);
-        num.setMinHeight(CELL_HEIGHT);
-        num.setMinWidth(CELL_WIDTH);
-        num.setAlignment(Pos.CENTER);
-        return num;
-    }
-
     private void drawGrass(GridPane gridPane, AbstractWorldMap map) throws Exception {
         for (Vector2D position : map.grasses.keySet()){
             gridPane.add(new GuiElementBox(map.grasses.get(position)).box, position.x, position.y, 1, 1);
         }
     }
 
-    private void drawAnimals(GridPane gridPane, AbstractWorldMap map) throws Exception{
+    private void drawAnimals(GridPane gridPane, AbstractWorldMap map, DataTracking dataTracking) throws Exception{
+        Set<String> modes = map.getMode();
         for (Animal animal : map.animals.values()){
-            gridPane.add(new GuiElementBox(animal).box, animal.position.x, animal.position.y, 1, 1);
+            GuiElementBox temp = new GuiElementBox(animal);
+            temp.dataTracking = dataTracking;
+            if (map.highlight && modes.contains(animal.genome.toString())){
+                temp.highlight();
+            }
+            gridPane.add(temp.button, animal.position.x, animal.position.y, 1, 1);
         }
     }
 
@@ -269,5 +287,19 @@ public class App extends Application {
                 gridPane.add(background, i, j, 1, 1);
             }
         }
+    }
+
+    private Button startHighlight(GridPane gridPane, AbstractWorldMap map, DataTracking dataTracking){
+        Button button = new Button();
+        button.setText("Show modes");
+        button.setOnAction(event -> {
+            map.highlight = !map.highlight;
+            try {
+                drawAnimals(gridPane, map, dataTracking);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        return button;
     }
 }

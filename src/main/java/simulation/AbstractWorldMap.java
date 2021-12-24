@@ -21,7 +21,12 @@ public class AbstractWorldMap {
     public int totalLifeSpan = 0; // total life span of dead animals
     public int totalDead = 0;
     public LinkedHashMap<String, Integer> signatures = new LinkedHashMap<>();
-
+    public int childrenOfTracked = 0;
+    public int offspringOfTracked = 0;
+    public boolean trackedAnimalDied = false;
+    public Animal trackedAnimal;
+    public int totalChildren = 0;
+    public boolean highlight = false;
 
     public AbstractWorldMap(App newApp){
         app = newApp;
@@ -69,11 +74,12 @@ public class AbstractWorldMap {
         for (Vector2D position: initialPositions){
             Animal newAnimal = new Animal(new Vector2D(position.x, position.y), app.startingEnergy, this);
             animals.put(position, newAnimal);
-            if (signatures.containsKey(newAnimal.signature)){
-                signatures.put(newAnimal.signature, signatures.get(newAnimal.signature) + 1);
+            String temp = newAnimal.genome.toString();
+            if (signatures.containsKey(temp)){
+                signatures.put(temp, signatures.get(temp) + 1);
             }
             else {
-                signatures.put(newAnimal.signature, 1);
+                signatures.put(temp, 1);
             }
         }
     }
@@ -144,12 +150,17 @@ public class AbstractWorldMap {
                 totalEnergy -= entry.getValue().energy;
                 totalDead += 1;
                 totalLifeSpan += entry.getValue().lifeSpan;
-                if (signatures.get(entry.getValue().signature) == 1){
-                    signatures.remove(entry.getValue().signature);
+                String sign = entry.getValue().genome.toString();
+                if (signatures.get(sign) == 1){
+                    signatures.remove(sign);
                 }
                 else {
-                    signatures.put(entry.getValue().signature, signatures.get(entry.getValue().signature) - 1);
+                    signatures.put(sign, signatures.get(sign) - 1);
                 }
+                if (entry.getValue() == trackedAnimal){
+                    trackedAnimalDied = true;
+                }
+                totalChildren -= entry.getValue().numOfChildren;
                 iter.remove();
                 if (!(animals.containsKey(entry.getKey()))){
                     freeCell(entry.getKey());
@@ -208,18 +219,44 @@ public class AbstractWorldMap {
                 }
                 Animal newAnimal = mother.child(father);
                 animals.put(position, newAnimal);
-                if (signatures.containsKey(newAnimal.signature)){
-                    signatures.put(newAnimal.signature, signatures.get(newAnimal.signature) + 1);
+                String sign = newAnimal.genome.toString();
+                if (signatures.containsKey(sign)){
+                    signatures.put(sign, signatures.get(sign) + 1);
                 }
                 else {
-                    signatures.put(newAnimal.signature, 1);
+                    signatures.put(sign, 1);
                 }
+                totalChildren += 2;
             }
         }
     }
 
-    public String getMode(){
-        // TODO
-        return null;
+    public Set<String> getMode(){
+        // find most common signature
+        int num = 0;
+        for (String sign : signatures.keySet()){
+            if (signatures.get(sign) > 0){
+                num = signatures.get(sign);
+            }
+        }
+        // make a set of all signatures with num occurrences
+        Set<String> modes = new TreeSet<>();
+        for (String sign : signatures.keySet()){
+            if (signatures.get(sign) == num){
+                modes.add(sign);
+            }
+        }
+        return modes;
+    }
+
+    public void resetTracking(){
+        for (Animal animal : animals.values()){
+            animal.isTracked = false;
+            animal.isChildOfTracked = false;
+            animal.isDescendantOfTracked = false;
+        }
+        childrenOfTracked = 0;
+        offspringOfTracked = 0;
+        trackedAnimalDied = false;
     }
 }
