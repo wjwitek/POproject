@@ -1,17 +1,12 @@
 package simulation;
 
-import org.apache.commons.collections4.MultiValuedMap;
-import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import simulation.gui.App;
-
-import java.util.Iterator;
-import java.util.Map;
 
 public class BoundedWorldMap extends AbstractWorldMap{
     public BoundedWorldMap(App app){super(app);}
 
+    /* For each animal randomize type of movement. */
     public void moveAnimals(){
-        //for each animal randomize type of movement, where should they be after
         for (Animal animal : animals.values()){
             animal.move();
             // handle animal going over the map

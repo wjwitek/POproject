@@ -10,6 +10,7 @@ import javafx.scene.layout.VBox;
 import simulation.AbstractWorldMap;
 import simulation.Animal;
 
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -54,48 +55,6 @@ public class DataTracking {
         averageChildrenNum.getData().add(new XYChart.Data<>(day, (double) map.totalChildren / animalsNum));
     }
 
-    public LineChart<Number, Number> drawAnimalGrassChart(){
-        // define axes
-        NumberAxis xAxis = new NumberAxis();
-        NumberAxis yAxis = new NumberAxis();
-        xAxis.setLabel("Simulation day");
-        yAxis.setLabel("Total count");
-        // create chart
-        LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
-        lineChart.setTitle("Animal and grass count");
-        // add data to chart
-        lineChart.getData().addAll(animalSeries, grassSeries);
-        return lineChart;
-    }
-
-    public LineChart<Number, Number> drawAverageEnergy(){
-        // define axes
-        NumberAxis xAxis = new NumberAxis();
-        NumberAxis yAxis = new NumberAxis();
-        xAxis.setLabel("Simulation day");
-        yAxis.setLabel("Average energy of animal");
-        // create chart
-        LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
-        lineChart.setTitle("Average energy of animal over days");
-        // add data to chart
-        lineChart.getData().add(averageEnergySeries);
-        return lineChart;
-    }
-
-    public LineChart<Number, Number> drawAverageLifeSpan(){
-        // define axes
-        NumberAxis xAxis = new NumberAxis();
-        NumberAxis yAxis = new NumberAxis();
-        xAxis.setLabel("Simulation day");
-        yAxis.setLabel("Average life span");
-        // create chart
-        LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
-        lineChart.setTitle("Average life span of dead animals");
-        // add data to chart
-        lineChart.getData().add(averageLifeSpan);
-        return lineChart;
-    }
-
     public void modes(VBox vBox){
         vBox.getChildren().clear();
         // add all modes to vBox
@@ -114,8 +73,10 @@ public class DataTracking {
     public void drawAnimalStats(Animal animal){
         if (!(map.active)){
             animalStatsGrid.getChildren().clear();
-            Label test = new Label(animal.genome.toString());
-            animalStatsGrid.add(test, 0, 0, 1, 1);
+            Label genomeInfo = new Label("Genome:");
+            animalStatsGrid.add(genomeInfo,0, 0, 1, 1);
+            Label genome = new Label(animal.genome.toString());
+            animalStatsGrid.add(genome, 0, 1, 1, 1);
             trackingAnimal = true;
             map.trackedAnimal = animal;
             animal.isTracked = true;
@@ -127,9 +88,12 @@ public class DataTracking {
     public void updateAnimalStats(){
         if (trackingAnimal){
             animalStatsGrid.getChildren().clear();
-            animalStatsGrid.add(new Label(map.trackedAnimal.genome.toString()), 0, 0, 1, 1);
-            animalStatsGrid.add(new Label(String.valueOf(map.childrenOfTracked)), 0, 1, 1, 1);
-            animalStatsGrid.add(new Label(String.valueOf(map.offspringOfTracked)), 0, 2, 1, 1);
+            animalStatsGrid.getChildren().clear();
+            Label genomeInfo = new Label("Genome:");
+            animalStatsGrid.add(genomeInfo,0, 0, 1, 1);
+            animalStatsGrid.add(new Label(map.trackedAnimal.genome.toString()), 0, 1, 1, 1);
+            animalStatsGrid.add(new Label("Number of children: " + map.childrenOfTracked), 0, 2, 1, 1);
+            animalStatsGrid.add(new Label("Number of all offspring: " + map.offspringOfTracked), 0, 3, 1, 1);
             if (map.trackedAnimalDied){
                 if (dayOfDeath == -1){
                     dayOfDeath = day;
@@ -139,17 +103,51 @@ public class DataTracking {
         }
     }
 
-    public LineChart<Number, Number> drawAverageChildren(){
+    public ArrayList<String[]> generateReport(){
+        double totalAnimals = 0;
+        double totalGrass = 0;
+        double totalAverageEnergy = 0;
+        double totalAverageLifespan = 0;
+        double totalAverageChildren = 0;
+        ArrayList<String[]> data = new ArrayList<>();
+        for (int i=0; i<day; i++){
+            String[] dayData;
+            dayData = new String[5];
+            totalAnimals += decodeData(animalSeries, dayData, i, 0);
+            totalGrass += decodeData(grassSeries, dayData, i, 1);
+            totalAverageEnergy += decodeData(averageEnergySeries, dayData, i, 2);
+            totalAverageLifespan += decodeData(averageLifeSpan, dayData, i, 3);
+            totalAverageChildren += decodeData(averageChildrenNum, dayData, i, 4);
+            System.out.println("Hej");
+            data.add(dayData);
+        }
+        String[] dayData = {
+        String.valueOf(totalAnimals / day),
+        String.valueOf(totalGrass / day),
+        String.valueOf(totalAverageEnergy / day),
+        String.valueOf(totalAverageLifespan / day),
+        String.valueOf(totalAverageChildren / day)};
+        data.add(dayData);
+        return  data;
+    }
+
+    public double decodeData(XYChart.Series<Number, Number> series, String[] dayData, int i, int j){
+        dayData[j] = series.getData().get(i).YValueProperty().get().toString();
+        return series.getData().get(i).YValueProperty().get().doubleValue();
+    }
+
+    public LineChart<Number, Number> allChart(){
         // define axes
         NumberAxis xAxis = new NumberAxis();
         NumberAxis yAxis = new NumberAxis();
         xAxis.setLabel("Simulation day");
-        yAxis.setLabel("Average number of children");
+        yAxis.setLabel("Value");
         // create chart
         LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
-        lineChart.setTitle("Average number of children per animal");
+        lineChart.setTitle("Animal statistics");
         // add data to chart
-        lineChart.getData().add(averageChildrenNum);
+        lineChart.getData().addAll(animalSeries, grassSeries, averageEnergySeries, averageLifeSpan, averageChildrenNum);
+        lineChart.setMaxWidth(400);
         return lineChart;
     }
 }

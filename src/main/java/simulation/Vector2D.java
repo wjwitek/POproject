@@ -25,27 +25,9 @@ public class Vector2D {
         return this.x >= other.x && this.y >= other.y;
     }
 
-    public Vector2D upperRight(Vector2D other){
-        int x = Math.max(this.x, other.x);
-        int y = Math.max(this.y, other.y);
-        return new Vector2D(x, y);
-    }
-
-    public Vector2D lowerLeft(Vector2D other){
-        int x = Math.min(this.x, other.x);
-        int y = Math.min(this.y, other.y);
-        return new Vector2D(x, y);
-    }
-
     public Vector2D add(Vector2D other){
         int x = this.x + other.x;
         int y = this.y + other.y;
-        return new Vector2D(x, y);
-    }
-
-    public Vector2D subtract(Vector2D other){
-        int x = this.x - other.x;
-        int y = this.y - other.y;
         return new Vector2D(x, y);
     }
 
@@ -58,45 +40,12 @@ public class Vector2D {
         return this.x == that.x && this.y == that.y;
     }
 
-    public Vector2D opposite(){
-        int x = -this.x;
-        int y = -this.y;
-        return new Vector2D(x, y);
-    }
-
-    public void modifyX(int newX){
-        this.x = newX;
-    }
-
-    public void modifyY(int newY){
-        this.y = newY;
-    }
-
     @Override
     public int hashCode(){
         return Objects.hash(this.x, this.y);
     }
 
-    public int compareX(Vector2D other){
-        if (this.x < other.x){
-            return -1;
-        }
-        if (this.x > other.x){
-            return 1;
-        }
-        return Integer.compare(this.y, other.y);
-    }
-
-    public int compareY(Vector2D other){
-        if (this.y < other.y){
-            return -1;
-        }
-        if (this.y > other.y){
-            return 1;
-        }
-        return Integer.compare(this.x, other.x);
-    }
-
+    /* Modify vector, based on current orientation of an animal. */
     public void increment(Orientation orientation, int amount){
         switch (orientation){
             case NORTH -> y -= amount;
@@ -122,7 +71,7 @@ public class Vector2D {
         }
     }
 
-    // generate random vector that follows leftCorner and precedes rightCorner
+    /* Generate random vector that follows leftCorner and precedes rightCorner. */
     public Vector2D randomVectorWithin(Vector2D leftCorner, Vector2D rightCorner){
         int randomX = ThreadLocalRandom.current().nextInt(leftCorner.x, rightCorner.x + 1);
         int randomY = ThreadLocalRandom.current().nextInt(leftCorner.y, rightCorner.y + 1);

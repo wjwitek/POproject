@@ -10,8 +10,8 @@ public enum Orientation {
     WEST,
     NORTHWEST;
 
+    /* Change orientation based on a number/ */
     public Orientation rotate(int rotation){
-        // TODO: write a test
         if (rotation > 0 && rotation < 4){
             return Orientation.values()[(this.ordinal() + rotation) % 8];
         }

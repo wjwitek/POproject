@@ -4,13 +4,17 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import simulation.*;
 
+import java.io.FileNotFoundException;
 import java.util.Set;
 
 
@@ -27,6 +31,7 @@ public class App extends Application {
     private SimulationEngine engine;
     public DataTracking boundedDataTracker;
     public DataTracking rolledDataTracker;
+    private boolean magic = false;
 
     public VBox rBox;
     public VBox bBox;
@@ -51,6 +56,10 @@ public class App extends Application {
         TextField plantEnergyField = addTextField(gridPane, "Plant energy", 12);
         TextField jungleRatioField = addTextField(gridPane, "Jungle ratio", 15);
         TextField startAnimals = addTextField(gridPane, "Starting animals", 18);
+        RadioButton magicButton = new RadioButton();
+        gridPane.add(magicButton, 1, 21, 1, 1);
+        Label magicLabel = new Label("Magic evolution");
+        gridPane.add(magicLabel, 0, 21, 1, 1);
 
         // set default values
         widthField.setText("20");
@@ -63,9 +72,9 @@ public class App extends Application {
 
         // button to save settings and change scene
         createStartButton(gridPane, widthField, heightField, startEnergyField, moveEnergyField, plantEnergyField,
-                jungleRatioField, startAnimals, primaryStage);
+                jungleRatioField, startAnimals, primaryStage, magicButton);
 
-        Scene scene = new Scene(gridPane, 240, 260);
+        Scene scene = new Scene(gridPane, 240, 300);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
@@ -78,56 +87,71 @@ public class App extends Application {
         GridPane layout = new GridPane();
         layout.setHgap(20);
         layout.setVgap(20);
+        //addLayoutConstraints(layout);
+        layout.setPadding(new Insets(10, 10, 10, 10));
+
         // add grids to layout
-        layout.add(rolledGridPane, 0, 0, 1, 2);
-        layout.add(boundedGridPane, 0, 2, 1, 2);
+        layout.add(rolledGridPane, 1, 0, 1, 5);
+        layout.add(boundedGridPane, 1, 6, 1, 5);
 
         // start simulation
-        engine = new SimulationEngine(this, rolledGridPane, boundedGridPane);
+        engine = new SimulationEngine(this, rolledGridPane, boundedGridPane, magic);
+
+        // add map labels
+        Label rolledLabel = new Label("Rolled map");
+        rolledLabel.setAlignment(Pos.CENTER);
+        rolledLabel.setStyle("-fx-rotate: -90");
+        rolledLabel.minHeight(100);
+        layout.add(rolledLabel, 0, 0, 1, 5);
+
+        Label boundedLabel = new Label("Bounded map");
+        boundedLabel.setAlignment(Pos.CENTER);
+        boundedLabel.setStyle("-fx-rotate: -90");
+        layout.add(boundedLabel, 0, 6, 1, 5);
 
         // add buttons to layout
-        createStopStartButton(layout, engine.rolledMap, 0);
-        createStopStartButton(layout, engine.boundedMap, 2);
+        createStopStartButton(layout, engine.rolledMap, 2, 0);
+        createStopStartButton(layout, engine.boundedMap, 12, 6);
 
         // add grids for animal statistics
         GridPane rolledAnimalStats = new GridPane();
         GridPane boundedAnimalStats = new GridPane();
-        layout.add(rolledAnimalStats, 4, 1, 2, 1);
-        layout.add(boundedAnimalStats, 4, 3, 2, 1);
+        layout.add(rolledAnimalStats, 4, 3, 1, 2);
+        layout.add(boundedAnimalStats, 4, 9, 1, 2);
 
         // start tracking data
         boundedDataTracker = new DataTracking(engine.boundedMap, boundedAnimalStats);
         rolledDataTracker = new DataTracking(engine.rolledMap, rolledAnimalStats);
 
         // add charts to grid
-        layout.add(rolledDataTracker.drawAnimalGrassChart(), 2, 0, 1, 1);
-        layout.add(rolledDataTracker.drawAverageEnergy(), 3, 0, 1, 1);
-        layout.add(rolledDataTracker.drawAverageLifeSpan(), 2,1, 1, 1);
-        layout.add(rolledDataTracker.drawAverageChildren(), 3, 1, 1, 1);
-
-        layout.add(boundedDataTracker.drawAnimalGrassChart(), 2, 2, 1, 1);
-        layout.add(boundedDataTracker.drawAverageEnergy(), 3, 2, 1, 1);
-        layout.add(boundedDataTracker.drawAverageLifeSpan(), 2, 3, 1 , 1);
-        layout.add(boundedDataTracker.drawAverageChildren(), 3, 3, 1, 1);
+        layout.add(rolledDataTracker.allChart(), 3, 0, 2, 5);
+        layout.add(boundedDataTracker.allChart(), 3, 6, 2, 5);
 
         // find and display mode
         ScrollPane rolledMode = new ScrollPane();
         rBox = new VBox();
+        rBox.setMaxWidth(400);
         rolledMode.setContent(rBox);
-        layout.add(rolledMode, 4, 0, 1, 1);
+        layout.add(rolledMode, 4, 0, 1, 3);
 
         ScrollPane boundedMode = new ScrollPane();
         bBox = new VBox();
+        bBox.setMaxWidth(400);
         boundedMode.setContent(bBox);
-        layout.add(boundedMode, 4, 2, 1, 1);
+        layout.add(boundedMode, 4, 6, 1, 3);
 
         // add buttons to highlight animals
-        layout.add(startHighlight(rolledGridPane, engine.rolledMap, rolledDataTracker), 1, 1, 1, 1);
-        layout.add(startHighlight(boundedGridPane, engine.boundedMap, boundedDataTracker), 1, 3, 1, 1);
+        layout.add(startHighlight(rolledGridPane, engine.rolledMap, rolledDataTracker), 2, 2, 1, 1);
+        layout.add(startHighlight(boundedGridPane, engine.boundedMap, boundedDataTracker), 2, 8, 1, 1);
 
-        int SCREEN_WIDTH = 750;
-        int SCREEN_HEIGHT = 750;
-        Scene scene = new Scene(layout, SCREEN_WIDTH, SCREEN_HEIGHT);
+        // add buttons to save files
+        layout.add(saveToFile(rolledDataTracker, "D:\\2021_22Z\\PO_projekt\\src\\main\\resources\\raports\\rolled.csv",
+                engine.rolledMap), 2, 4, 1, 1);
+        layout.add(saveToFile(boundedDataTracker, "D:\\2021_22Z\\PO_projekt\\src\\main\\resources\\raports\\bounded.csv",
+                engine.boundedMap), 2, 10, 1, 1);
+
+        //Rectangle2D screenBounds = Screen.getPrimary().getBounds();
+        Scene scene = new Scene(layout, 1520, 820);
 
         Thread engineThread = new Thread(() -> {
             while (true) {
@@ -147,7 +171,8 @@ public class App extends Application {
         engineThread.start();
 
         primaryStage.setScene(scene);
-        primaryStage.setFullScreen(true);
+        primaryStage.centerOnScreen();
+        //primaryStage.setFullScreen(true);
     }
 
     private void getSimParams(TextField widthField, TextField heightField, TextField startEnergyField,
@@ -176,53 +201,49 @@ public class App extends Application {
 
     private void createStartButton(GridPane gridPane, TextField widthField, TextField heightField,
                                      TextField startEnergyField, TextField moveEnergyField, TextField plantEnergyField,
-                                     TextField jungleRatioField, TextField startAnimals, Stage primaryStage){
+                                     TextField jungleRatioField, TextField startAnimals, Stage primaryStage,
+                                   RadioButton radioButton){
         Button save = new Button("Start");
         save.setAlignment(Pos.CENTER);
         save.setDefaultButton(true); // clicking enter is equal to pressing this button
-        save.setOnAction(new EventHandler<>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                // get values from text fields
-                boolean correctValues = true;
+        save.setOnAction(actionEvent -> {
+            // get values from text fields
+            boolean correctValues = true;
+            try {
+                getSimParams(widthField, heightField, startEnergyField, moveEnergyField, plantEnergyField, jungleRatioField, startAnimals);
+                magic = radioButton.isSelected();
+            } catch (Exception ex) {
+                correctValues = false;
+                Alert warning = new Alert(Alert.AlertType.ERROR, "Check provided values, some of them are of incorrect type or range.");
+                warning.show();
+            }
+            if (correctValues) {
                 try {
-                    getSimParams(widthField, heightField, startEnergyField, moveEnergyField, plantEnergyField, jungleRatioField, startAnimals);
-                } catch (Exception ex) {
-                    correctValues = false;
-                    Alert warning = new Alert(Alert.AlertType.ERROR, "Check provided values, some of them are of incorrect type or range.");
-                    warning.show();
-                }
-                if (correctValues) {
-                    try {
-                        mapStage(primaryStage);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                    mapStage(primaryStage);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
         });
-        gridPane.add(save, 1, 21, 2, 1);
+        gridPane.add(save, 1, 24, 2, 1);
     }
 
-    public void createStopStartButton(GridPane gridPane, AbstractWorldMap map, int row){
+    public void createStopStartButton(GridPane gridPane, AbstractWorldMap map, int col, int row){
         Button stopStart = new Button("Stop");
         stopStart.setAlignment(Pos.CENTER);
         stopStart.setDefaultButton(true); // clicking enter is equal to pressing this button
-        stopStart.setOnAction(new EventHandler<>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                // get values from text fields
-                if (map.active){
-                    map.active = false;
-                    stopStart.setText("Start");
-                }
-                else {
-                    map.active = true;
-                    stopStart.setText("Stop");
-                }
+        stopStart.setOnAction(actionEvent -> {
+            // get values from text fields
+            if (map.active){
+                map.active = false;
+                stopStart.setText("Start");
+            }
+            else {
+                map.active = true;
+                stopStart.setText("Stop");
             }
         });
-        gridPane.add(stopStart, 1, row, 1, 1);
+        gridPane.add(stopStart, col, row, 1, 1);
     }
 
     public void draw(GridPane gridPane, AbstractWorldMap map, DataTracking dataTracking) throws Exception {
@@ -291,7 +312,7 @@ public class App extends Application {
 
     private Button startHighlight(GridPane gridPane, AbstractWorldMap map, DataTracking dataTracking){
         Button button = new Button();
-        button.setText("Show modes");
+        button.setText("Modes");
         button.setOnAction(event -> {
             map.highlight = !map.highlight;
             try {
@@ -301,5 +322,42 @@ public class App extends Application {
             }
         });
         return button;
+    }
+
+    private Button saveToFile(DataTracking dataTracking, String filename, AbstractWorldMap map){
+        Button button = new Button();
+        button.setText("Save");
+        button.setOnAction(event -> {
+            if (!(map.active)){
+                System.out.println(0);
+                FileHandler fileHandler = new FileHandler(dataTracking);
+                try {
+                    fileHandler.saveToFile(filename);
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        return button;
+    }
+
+    private void addLayoutConstraints(GridPane layout){
+        // add column constraints
+        ColumnConstraints col = new ColumnConstraints(40);
+        layout.getColumnConstraints().add(col);
+        col = new ColumnConstraints(560);
+        layout.getColumnConstraints().add(col);
+        col = new ColumnConstraints(60);
+        layout.getColumnConstraints().add(col);
+        col = new ColumnConstraints(400);
+        layout.getColumnConstraints().add(col);
+        col = new ColumnConstraints(400);
+        layout.getColumnConstraints().add(col);
+
+        // add row constraints
+        for (int i=0; i<11; i++){
+            RowConstraints row = new RowConstraints(50);
+            layout.getRowConstraints().add(row);
+        }
     }
 }

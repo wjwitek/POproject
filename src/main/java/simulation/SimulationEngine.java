@@ -11,13 +11,16 @@ public class SimulationEngine implements Runnable{
     private final GridPane rolledGridPane;
     private final GridPane boundedGridPane;
     private final App app;
+    private final boolean magic;
+    private int copies = 0;
 
-    public SimulationEngine(App newApp, GridPane newGridPane1, GridPane newGridPane2){
+    public SimulationEngine(App newApp, GridPane newGridPane1, GridPane newGridPane2, boolean evolutionType){
         app = newApp;
         rolledMap = new RolledWorldMap(app);
         boundedMap = new BoundedWorldMap(app);
         rolledGridPane = newGridPane1;
         boundedGridPane = newGridPane2;
+        magic = evolutionType;
     }
 
     @Override
@@ -30,6 +33,7 @@ public class SimulationEngine implements Runnable{
         }
     }
 
+    /* Execute all daily activities on a given map. */
     public void dayOnMap(AbstractWorldMap map, GridPane gridPane, DataTracking dataTracker){
         // remove all animals without energy from map
         map.killAnimals();
@@ -41,6 +45,11 @@ public class SimulationEngine implements Runnable{
         map.addGrass();
         // add children
         map.makeNewAnimals();
+        // if magic evolution is on, check if animals should be copied
+        if (magic && map.animals.size() == 5 && copies < 3){
+            map.copyAnimals();
+            copies += 1;
+        }
         // update data for statistics
         dataTracker.updateData();
         if (map instanceof RolledWorldMap){
