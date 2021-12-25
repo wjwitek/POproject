@@ -129,10 +129,10 @@ public class App extends Application {
         layout.add(startHighlight(boundedGridPane, engine.boundedMap, boundedDataTracker), 1, 11, 1, 1);
 
         // add buttons to save files
-        layout.add(saveToFile(rolledDataTracker, Paths.get("").toAbsolutePath() + "\\" + "src\\main\\java\\simulation\\raports\\rolled.csv",
-                engine.rolledMap), 2, 5, 1, 1);
-        layout.add(saveToFile(boundedDataTracker, Paths.get("").toAbsolutePath() + "\\" + "src\\main\\java\\simulation\\raports\\bounded.csv",
-                engine.boundedMap), 2, 11, 1, 1);
+        layout.add(saveToFile(rolledDataTracker, pathToReports("rolled.csv"), engine.rolledMap),
+                2, 5, 1, 1);
+        layout.add(saveToFile(boundedDataTracker, pathToReports("bounded.csv"), engine.boundedMap),
+                2, 11, 1, 1);
 
         // add map labels
         Label rolledLabel = new Label("Map with teleporting to other end.");
@@ -352,5 +352,15 @@ public class App extends Application {
         rolledMagic.setAlignment(Pos.CENTER);
         rolledMagic.setStyle("-fx-rotate: 90");
         layout.add(rolledMagic, 8, row, 1, 5);
+    }
+
+    /* Read OS to add correct path for generating reports. */
+    private String pathToReports(String filename){
+        String os = System.getProperty("os.name");
+        if (os.contains("windows")){
+            return Paths.get("").toAbsolutePath() + "\\" + "src\\reports\\" + filename;
+        }else{
+            return Paths.get("").toAbsolutePath() + "/" + "src/reports/" + filename;
+        }
     }
 }
