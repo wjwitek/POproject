@@ -37,6 +37,7 @@ public class DataTracking {
         animalStatsGrid = general;
     }
 
+    /* Read and store history of data about population of animals. */
     public void updateData(){
         day += 1;
         animalSeries.getData().add(new XYChart.Data<>(day, map.animals.size()));
@@ -55,21 +56,22 @@ public class DataTracking {
         averageChildrenNum.getData().add(new XYChart.Data<>(day, (double) map.totalChildren / animalsNum));
     }
 
+    /* Add all modes to VBox. */
     public void modes(VBox vBox){
         vBox.getChildren().clear();
-        // add all modes to vBox
         for (String signature : modes){
             vBox.getChildren().add(getLabel(signature));
         }
     }
 
+    /* Create centered label. */
     private Label getLabel(String text){
         Label num = new Label(text);
         num.setAlignment(Pos.CENTER);
         return num;
     }
 
-    // draw statistics of an animal
+    /* Draw statistics of an animal. */
     public void drawAnimalStats(Animal animal){
         if (!(map.active)){
             animalStatsGrid.getChildren().clear();
@@ -85,6 +87,7 @@ public class DataTracking {
         }
     }
 
+    /* Update and redraw statistics of an animal. */
     public void updateAnimalStats(){
         if (trackingAnimal){
             animalStatsGrid.getChildren().clear();
@@ -98,11 +101,13 @@ public class DataTracking {
                 if (dayOfDeath == -1){
                     dayOfDeath = day;
                 }
-                animalStatsGrid.add(new Label(String.valueOf(dayOfDeath)), 0, 3, 1, 1);
+                animalStatsGrid.add(new Label("Day of death: "), 0, 4, 1, 1);
+                animalStatsGrid.add(new Label(String.valueOf(dayOfDeath)), 1, 4, 1, 1);
             }
         }
     }
 
+    /* Generate all data that is needed to create a CSV file to save current state of simulation. */
     public ArrayList<String[]> generateReport(){
         double totalAnimals = 0;
         double totalGrass = 0;
@@ -118,7 +123,6 @@ public class DataTracking {
             totalAverageEnergy += decodeData(averageEnergySeries, dayData, i, 2);
             totalAverageLifespan += decodeData(averageLifeSpan, dayData, i, 3);
             totalAverageChildren += decodeData(averageChildrenNum, dayData, i, 4);
-            System.out.println("Hej");
             data.add(dayData);
         }
         String[] dayData = {
@@ -131,11 +135,13 @@ public class DataTracking {
         return  data;
     }
 
+    /* Decode data from entry to double. */
     public double decodeData(XYChart.Series<Number, Number> series, String[] dayData, int i, int j){
         dayData[j] = series.getData().get(i).YValueProperty().get().toString();
         return series.getData().get(i).YValueProperty().get().doubleValue();
     }
 
+    /* Draw all tracked statistics about map in one chart. */
     public LineChart<Number, Number> allChart(){
         // define axes
         NumberAxis xAxis = new NumberAxis();
@@ -147,7 +153,6 @@ public class DataTracking {
         lineChart.setTitle("Animal statistics");
         // add data to chart
         lineChart.getData().addAll(animalSeries, grassSeries, averageEnergySeries, averageLifeSpan, averageChildrenNum);
-        lineChart.setMaxWidth(400);
         return lineChart;
     }
 }

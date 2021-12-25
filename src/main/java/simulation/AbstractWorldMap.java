@@ -35,6 +35,7 @@ public class AbstractWorldMap {
     // information for simulation engine
     public boolean highlight = false;
     public boolean active = true;
+    public int copies = 0;
 
     public AbstractWorldMap(App newApp){
         app = newApp;

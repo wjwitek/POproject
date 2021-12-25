@@ -5,5 +5,5 @@ public interface IMapElement {
 
     String toString();
 
-    String getPath();
+    String getFileName();
 }

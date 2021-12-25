@@ -1,7 +1,5 @@
 package simulation.gui;
 
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -13,6 +11,7 @@ import simulation.IMapElement;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.net.URL;
 
 public class GuiElementBox {
     VBox box;
@@ -21,7 +20,9 @@ public class GuiElementBox {
 
     public GuiElementBox(IMapElement object) throws Exception{
         // import image
-        InputStream stream = new FileInputStream(object.getPath());
+        URL resource = getClass().getClassLoader().getResource(object.getFileName());
+        assert resource != null;
+        InputStream stream = resource.openStream();
         Image objectImage = new Image(stream, 15, 15, true, true);
         ImageView objectImageView = new ImageView(objectImage);
 
@@ -45,6 +46,7 @@ public class GuiElementBox {
         box.setAlignment(Pos.CENTER);
     }
 
+    /* Highlight animal with genome that is modes. */
     public void highlight(){
         button.setStyle("-fx-border-color: purple");
     }

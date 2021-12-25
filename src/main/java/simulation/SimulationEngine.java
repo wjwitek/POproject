@@ -12,7 +12,6 @@ public class SimulationEngine implements Runnable{
     private final GridPane boundedGridPane;
     private final App app;
     private final boolean magic;
-    private int copies = 0;
 
     public SimulationEngine(App newApp, GridPane newGridPane1, GridPane newGridPane2, boolean evolutionType){
         app = newApp;
@@ -46,9 +45,19 @@ public class SimulationEngine implements Runnable{
         // add children
         map.makeNewAnimals();
         // if magic evolution is on, check if animals should be copied
-        if (magic && map.animals.size() == 5 && copies < 3){
+        if (magic && map.animals.size() == 5 && map.copies < 3){
             map.copyAnimals();
-            copies += 1;
+            map.copies += 1;
+        }
+        if (magic){
+            int row;
+            if (map instanceof RolledWorldMap){
+                row = 1;
+            }
+            else {
+                row = 7;
+            }
+            map.app.drawMagicLabel(map, row, map.app.layout);
         }
         // update data for statistics
         dataTracker.updateData();

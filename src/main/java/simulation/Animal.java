@@ -21,8 +21,8 @@ public class Animal implements IMapElement{
     public boolean isTracked = false;
     public int numOfChildren = 0;
 
+    /* Constructor for random animal. */
     public Animal(Vector2D startingPosition, int startingEnergy, AbstractWorldMap newMap){
-        // constructor for random animal
         position = startingPosition;
         randomGenome();
         orientation = Orientation.values()[genome.get(randomGene())];
@@ -30,6 +30,7 @@ public class Animal implements IMapElement{
         map = newMap;
     }
 
+    /* Constructor for predetermined animal. */
     public Animal(int startingEnergy, AbstractWorldMap newMap){
         map = newMap;
         energy = startingEnergy;
@@ -46,20 +47,21 @@ public class Animal implements IMapElement{
     }
 
     @Override
-    public String getPath() {
+    public String getFileName() {
         switch (orientation){
-            case NORTH -> {return "src\\main\\resources\\north.png";}
-            case EAST -> {return "src\\main\\resources\\east.png";}
-            case WEST -> {return "src\\main\\resources\\west.png";}
-            case SOUTH -> {return "src\\main\\resources\\south.png";}
-            case NORTHEAST -> {return "src\\main\\resources\\northeast.png";}
-            case NORTHWEST -> {return "src\\main\\resources\\northwest.png";}
-            case SOUTHEAST -> {return "src\\main\\resources\\southeast.png";}
-            case SOUTHWEST -> {return "src\\main\\resources\\southwest.png";}
+            case NORTH -> {return "north.png";}
+            case EAST -> {return "east.png";}
+            case WEST -> {return "west.png";}
+            case SOUTH -> {return "south.png";}
+            case NORTHEAST -> {return "northeast.png";}
+            case NORTHWEST -> {return "northwest.png";}
+            case SOUTHEAST -> {return "southeast.png";}
+            case SOUTHWEST -> {return "southwest.png";}
             default -> throw new IllegalArgumentException(orientation + " is not a legal orientation of animal.");
         }
     }
 
+    /* Build random genome. */
     public void randomGenome(){
         ArrayList<Integer> helperNums = new ArrayList<>();
         for (int i = 0; i<31; i++) {
@@ -82,12 +84,13 @@ public class Animal implements IMapElement{
         }
     }
 
+    /* Chose random element of genome -> chosen random move. */
     public int randomGene(){
-        // chose random element of genome -> chosen random move
         Random rand = new Random();
         return rand.nextInt(32);
     }
 
+    /* Create genome for child, based on its parents. */
     public Animal childGenome(Animal other){
         Animal child = new Animal((int) ((energy + other.energy) * 0.25), this.map);
         child.position = new Vector2D(position.x, position.y);
@@ -99,6 +102,7 @@ public class Animal implements IMapElement{
         return child;
     }
 
+    /* Create child animal, based on its parents. */
     public Animal child(Animal other){
         Random rand = new Random();
         Animal child;
@@ -131,6 +135,7 @@ public class Animal implements IMapElement{
         return child;
     }
 
+    /* Randomly move an animal. */
     public void move(){
         // randomize gene
         Random rand = new Random();
