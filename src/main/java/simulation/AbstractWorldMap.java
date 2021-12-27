@@ -244,16 +244,17 @@ public class AbstractWorldMap {
                         father = animal;
                     }
                 }
-                Animal newAnimal = mother.child(father);
-                animals.put(position, newAnimal);
-                String sign = newAnimal.genome.toString();
-                if (signatures.containsKey(sign)){
-                    signatures.put(sign, signatures.get(sign) + 1);
+                if (mother.energy >= app.startingEnergy / 2 && father.energy >= app.startingEnergy / 2) {
+                    Animal newAnimal = mother.child(father);
+                    animals.put(position, newAnimal);
+                    String sign = newAnimal.genome.toString();
+                    if (signatures.containsKey(sign)) {
+                        signatures.put(sign, signatures.get(sign) + 1);
+                    } else {
+                        signatures.put(sign, 1);
+                    }
+                    totalChildren += 2;
                 }
-                else {
-                    signatures.put(sign, 1);
-                }
-                totalChildren += 2;
             }
         }
     }
